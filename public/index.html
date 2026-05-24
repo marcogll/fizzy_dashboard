@@ -1,0 +1,204 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Fizzi Dashboard · Activities</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+<div class="app">
+
+  <!-- Header -->
+  <header>
+    <div class="logo">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round">
+        <path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/>
+      </svg>
+      fizzi
+      <span>/ activities</span>
+    </div>
+
+    <div class="header-right">
+      <div class="status-dot" title="Live"></div>
+      <span class="last-updated" id="last-updated">—</span>
+
+      <!-- Theme toggle -->
+      <button class="btn-icon" id="btn-theme" title="Toggle theme">
+        <!-- Sun (shown in Latte / light mode) -->
+        <svg class="icon-sun" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+          <circle cx="12" cy="12" r="5"/>
+          <path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"/>
+        </svg>
+        <!-- Moon (shown in Mocha / dark mode) -->
+        <svg class="icon-moon" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+          <path d="M21 12.79A9 9 0 1111.21 3 7 7 0 0021 12.79z"/>
+        </svg>
+      </button>
+
+      <button class="btn-icon" id="btn-refresh" title="Refresh">
+        <svg width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+          <path d="M23 4v6h-6M1 20v-6h6"/><path d="M3.51 9a9 9 0 0114.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0020.49 15"/>
+        </svg>
+      </button>
+    </div>
+  </header>
+
+  <div class="main">
+
+    <!-- Sidebar -->
+    <aside class="sidebar">
+      <div class="sidebar-section">
+        <div class="sidebar-label">Status</div>
+        <div id="status-nav"></div>
+      </div>
+      <div class="sidebar-section">
+        <div class="sidebar-label">People</div>
+        <div id="people-nav"></div>
+      </div>
+    </aside>
+
+    <!-- Content -->
+    <main class="content">
+
+      <!-- Error banner -->
+      <div class="error-banner" id="error-banner"></div>
+
+      <!-- Loading -->
+      <div class="loading-state" id="loading-state">
+        <div class="spinner"></div>
+        <span>Loading Fizzi board…</span>
+      </div>
+
+      <div id="main-content" style="display:none">
+
+        <!-- Stats -->
+        <div class="stats-row">
+          <div class="stat-card">
+            <div class="stat-label">Total cards</div>
+            <div class="stat-value" id="stat-total">—</div>
+            <div class="stat-sub">in this view</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-label">Done</div>
+            <div class="stat-value" id="stat-done">—</div>
+            <div class="stat-sub">completed</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-label">Active</div>
+            <div class="stat-value" id="stat-active">—</div>
+            <div class="stat-sub">in progress / ongoing</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-label">Stopped</div>
+            <div class="stat-value" id="stat-stopped">—</div>
+            <div class="stat-sub">blocked or paused</div>
+          </div>
+        </div>
+
+        <!-- Advanced Stats -->
+        <div class="advanced-stats">
+          <div class="stats-section">
+            <div class="stats-section-title">Completion</div>
+            <div class="completion-ring">
+              <span id="adv-completion">0%</span>
+              <div class="completion-bar"><div id="adv-completion-bar" style="width:0%"></div></div>
+            </div>
+            <div class="stats-mini">
+              <span>Overdue: <b id="adv-overdue">0</b></span>
+            </div>
+          </div>
+          <div class="stats-section">
+            <div class="stats-section-title">By Status</div>
+            <div id="status-bars"></div>
+          </div>
+          <div class="stats-section">
+            <div class="stats-section-title">Top Tags</div>
+            <div id="top-tags"></div>
+          </div>
+          <div class="stats-section">
+            <div class="stats-section-title">Priority</div>
+            <div id="priority-bars"></div>
+          </div>
+          <div class="stats-section stats-section-wide">
+            <div class="stats-section-title">Velocity (done per week)</div>
+            <div id="velocity-chart"></div>
+          </div>
+        </div>
+
+        <!-- Toolbar -->
+        <div class="toolbar">
+          <div class="search-box">
+            <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+              <circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/>
+            </svg>
+            <input id="search-input" type="text" placeholder="Search cards…">
+          </div>
+
+          <div id="tag-filters" style="display:flex;gap:0.4rem;flex-wrap:wrap;align-items:center"></div>
+
+          <div class="view-toggle" style="margin-left:auto">
+            <button class="view-btn active" data-view="grid" title="Grid view">
+              <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                <rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/>
+                <rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/>
+              </svg>
+            </button>
+            <button class="view-btn" data-view="list" title="List view">
+              <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                <path d="M8 6h13M8 12h13M8 18h13M3 6h.01M3 12h.01M3 18h.01"/>
+              </svg>
+            </button>
+            <button class="view-btn" data-view="board" title="Board view">
+              <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                <rect x="3" y="3" width="5" height="18" rx="1"/><rect x="10" y="3" width="5" height="12" rx="1"/>
+                <rect x="17" y="3" width="5" height="15" rx="1"/>
+              </svg>
+            </button>
+          </div>
+        </div>
+
+        <!-- Cards area -->
+        <div id="cards-area"></div>
+
+      </div>
+    </main>
+  </div>
+</div>
+
+<!-- Modal -->
+<div class="modal-overlay" id="modal-overlay">
+  <div class="modal">
+    <div class="modal-header">
+      <div class="modal-title" id="modal-title"></div>
+      <button class="modal-close" id="modal-close">✕</button>
+    </div>
+    <div class="modal-row">
+      <div class="modal-section">
+        <div class="modal-section-label">Status</div>
+        <div id="modal-status"></div>
+      </div>
+      <div class="modal-section">
+        <div class="modal-section-label">Due date</div>
+        <div class="modal-section-value" id="modal-due"></div>
+      </div>
+    </div>
+    <div class="modal-section">
+      <div class="modal-section-label">Tags</div>
+      <div id="modal-tags" style="display:flex;gap:0.35rem;flex-wrap:wrap;margin-top:2px"></div>
+    </div>
+    <div class="modal-section">
+      <div class="modal-section-label">Description</div>
+      <div class="modal-desc" id="modal-desc"></div>
+    </div>
+    <div class="modal-row" style="font-size:11px;color:var(--muted);margin-top:0.25rem">
+      <span>ID: <span id="modal-id" style="font-family:'DM Mono',monospace"></span></span>
+      <span>Created: <span id="modal-created"></span></span>
+      <span>Updated: <span id="modal-updated"></span></span>
+    </div>
+  </div>
+</div>
+
+<script src="app.js"></script>
+</body>
+</html>
