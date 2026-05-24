@@ -75,15 +75,50 @@ let activeStatus = 'all';
 let activeTag = 'all';
 let activeAssignee = 'all';
 let searchQuery = '';
+let activeBoard = 'all';
+let dateFrom = '';
+let dateTo = '';
 let allTags = [];
 let allAssignees = [];
 
 // ─── API ───────────────────────────────────────────
+function buildQuery() {
+  const params = new URLSearchParams();
+  if (activeBoard !== 'all') params.set('board', activeBoard);
+  if (dateFrom) params.set('from', dateFrom);
+  if (dateTo) params.set('to', dateTo);
+  if (searchQuery) params.set('search', searchQuery);
+  return params.toString();
+}
+
 async function fetchAPI() {
-  const res = await fetch('/api/cards');
+  const qs = buildQuery();
+  const res = await fetch(`/api/cards${qs ? '?' + qs : ''}`);
   if (!res.ok) throw new Error(`HTTP ${res.status}: ${res.statusText}`);
   const data = await res.json();
   return Array.isArray(data) ? data : (data.cards || data.data || data.items || []);
+}
+
+async function fetchBoards() {
+  const res = await fetch('/api/boards');
+  if (!res.ok) return [];
+  const data = await res.json();
+  return Array.isArray(data) ? data : [];
+}
+
+async function loadBoards() {
+  try {
+    const boards = await fetchBoards();
+    const select = document.getElementById('board-select');
+    select.innerHTML = '<option value="all">All boards</option>';
+    boards.forEach(b => {
+      const opt = document.createElement('option');
+      opt.value = b.id;
+      opt.textContent = b.name;
+      if (b.id === activeBoard) opt.selected = true;
+      select.appendChild(opt);
+    });
+  } catch(e) { console.error('boards error', e); }
 }
 
 async function loadData() {
@@ -633,7 +668,8 @@ function getDemoCards() {
 
 async function loadAdvancedStats() {
   try {
-    const res = await fetch('/api/stats/summary');
+    const qs = buildQuery();
+    const res = await fetch(`/api/stats/summary${qs ? '?' + qs : ''}`);
     if (!res.ok) return;
     const data = await res.json();
     renderAdvancedStats(data.summary);
@@ -652,7 +688,8 @@ function renderAdvancedStats(stats) {
 
 async function loadStatsByStatus() {
   try {
-    const res = await fetch('/api/stats/by-status');
+    const qs = buildQuery();
+    const res = await fetch(`/api/stats/by-status${qs ? '?' + qs : ''}`);
     if (!res.ok) return;
     const data = await res.json();
     renderStatusBars(data.byStatus);
@@ -674,7 +711,8 @@ function renderStatusBars(rows) {
 
 async function loadTopTags() {
   try {
-    const res = await fetch('/api/stats/by-tag');
+    const qs = buildQuery();
+    const res = await fetch(`/api/stats/by-tag${qs ? '?' + qs : ''}`);
     if (!res.ok) return;
     const data = await res.json();
     renderTopTags(data.byTag);
@@ -696,7 +734,8 @@ function renderTopTags(tags) {
 
 async function loadPriorityStats() {
   try {
-    const res = await fetch('/api/stats/by-priority');
+    const qs = buildQuery();
+    const res = await fetch(`/api/stats/by-priority${qs ? '?' + qs : ''}`);
     if (!res.ok) return;
     const data = await res.json();
     renderPriorityBars(data.byPriority);
@@ -724,7 +763,8 @@ function renderPriorityBars(p) {
 
 async function loadVelocity() {
   try {
-    const res = await fetch('/api/stats/velocity');
+    const qs = buildQuery();
+    const res = await fetch(`/api/stats/velocity${qs ? '?' + qs : ''}`);
     if (!res.ok) return;
     const data = await res.json();
     renderVelocityChart(data.velocity);
@@ -768,6 +808,25 @@ document.addEventListener('DOMContentLoaded', () => {
     applyFilters();
   });
 
+  // Board filter
+  const boardSelect = document.getElementById('board-select');
+  boardSelect.addEventListener('change', e => {
+    activeBoard = e.target.value;
+    refreshAll();
+  });
+
+  // Date filters
+  const dateFromInput = document.getElementById('date-from');
+  const dateToInput = document.getElementById('date-to');
+  dateFromInput.addEventListener('change', e => {
+    dateFrom = e.target.value;
+    refreshAll();
+  });
+  dateToInput.addEventListener('change', e => {
+    dateTo = e.target.value;
+    refreshAll();
+  });
+
   // View toggle
   document.querySelectorAll('.view-btn').forEach(btn => {
     btn.addEventListener('click', () => setView(btn.dataset.view));
@@ -792,6 +851,7 @@ document.addEventListener('DOMContentLoaded', () => {
     if (e.key === 'Escape') document.getElementById('modal-overlay').classList.remove('open');
   });
 
+  loadBoards();
   refreshAll();
   setInterval(refreshAll, 60000);
 });

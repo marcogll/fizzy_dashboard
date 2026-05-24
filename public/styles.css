@@ -321,22 +321,39 @@ header {
 .search-box input::placeholder { color: var(--muted); }
 .search-box svg { color: var(--muted); flex-shrink: 0; }
 
-.filter-chip {
+.filter-chip, .toolbar input[type="date"], .toolbar select {
   display: flex;
   align-items: center;
   gap: 0.4rem;
-  height: 30px;
+  height: 36px;
   padding: 0 0.75rem;
   border-radius: 20px;
   border: 1px solid var(--border);
-  background: none;
-  color: var(--muted);
+  background: var(--surface);
+  color: var(--text);
   font-size: 12px;
   font-family: inherit;
   cursor: pointer;
   transition: all 0.12s;
 }
-.filter-chip:hover { color: var(--text); border-color: var(--border2); }
+.toolbar input[type="date"] {
+  cursor: text;
+  color-scheme: dark;
+}
+[data-theme="latte"] .toolbar input[type="date"] {
+  color-scheme: light;
+}
+.toolbar select {
+  appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%23a6adc8' stroke-width='2'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 0.6rem center;
+  padding-right: 1.8rem;
+}
+[data-theme="latte"] .toolbar select {
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%236c6f85' stroke-width='2'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E");
+}
+.filter-chip:hover, .toolbar input[type="date"]:hover, .toolbar select:hover { border-color: var(--border2); }
 .filter-chip.active { color: var(--text); border-color: var(--accent2); background: rgba(114,135,253,0.08); }
 
 .view-toggle {
