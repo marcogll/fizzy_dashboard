@@ -78,7 +78,7 @@ function toggleTheme() {
 // ─── State ────────────────────────────────────────────
 let allCards = [];
 let filteredCards = [];
-let currentView = 'grid';
+let currentView = 'board';
 let activeStatus = 'all';
 let activeTag = 'all';
 let activeAssignee = 'all';
