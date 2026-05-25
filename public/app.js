@@ -86,6 +86,7 @@ let searchQuery = '';
 let activeBoard = 'all';
 let dateFrom = '';
 let dateTo = '';
+let boardColumns = [];
 let allTags = [];
 let allAssignees = [];
 
@@ -114,6 +115,14 @@ async function fetchBoards() {
   return Array.isArray(data) ? data : [];
 }
 
+async function fetchColumnsAPI() {
+  const qs = buildQuery();
+  const res = await fetch(`/api/columns${qs ? '?' + qs : ''}`);
+  if (!res.ok) throw new Error(`HTTP ${res.status}: ${res.statusText}`);
+  const data = await res.json();
+  return Array.isArray(data) ? data : [];
+}
+
 async function loadBoards() {
   try {
     const boards = await fetchBoards();
@@ -133,14 +142,15 @@ async function loadData() {
   showLoading(true);
   hideError();
   try {
-    const data = await fetchAPI();
+    const [cardData, colData] = await Promise.all([fetchAPI(), fetchColumnsAPI().catch(() => [])]);
 
-    const cards = Array.isArray(data) ? data :
-                  data.cards ? data.cards :
-                  data.data ? data.data :
-                  data.items ? data.items : [];
+    const cards = Array.isArray(cardData) ? cardData :
+                  cardData.cards ? cardData.cards :
+                  cardData.data ? cardData.data :
+                  cardData.items ? cardData.items : [];
 
     allCards = cards.map(normalizeCard);
+    boardColumns = colData;
     extractTags();
     extractAssignees();
     applyFilters();
@@ -152,6 +162,7 @@ async function loadData() {
   } catch(err) {
     showError(err.message);
     allCards = getDemoCards();
+    boardColumns = [];
     extractTags();
     extractAssignees();
     applyFilters();
@@ -477,35 +488,39 @@ function renderBoardView(area) {
   const wrapper = document.createElement('div');
   wrapper.className = 'board-view';
 
-  const grouped = {};
-  STATUSES.forEach(s => { grouped[s.label] = []; });
-  grouped['Other'] = [];
+  // If we have real columns from Fizzy, use them
+  const columnsToRender = (boardColumns && boardColumns.length > 0)
+    ? boardColumns.map(col => ({
+        label: col.name,
+        color: col.color || '#6b7280',
+        cards: col.cards || [],
+      }))
+    : (() => {
+        const grouped = {};
+        STATUSES.forEach(s => { grouped[s.label] = []; });
+        grouped['Other'] = [];
+        filteredCards.forEach(card => {
+          const s = resolveStatus(card.status);
+          const label = s ? s.label : 'Other';
+          if (grouped[label] !== undefined) grouped[label].push(card);
+          else grouped['Other'].push(card);
+        });
+        return [...STATUSES.map(s => ({ label: s.label, color: s.color, cards: grouped[s.label] || [] })),
+                { label: 'Other', color: '#6b7280', cards: grouped['Other'] || [] }];
+      })();
 
-  filteredCards.forEach(card => {
-    const s = resolveStatus(card.status);
-    const label = s ? s.label : 'Other';
-    if (grouped[label] !== undefined) {
-      grouped[label].push(card);
-    } else {
-      grouped['Other'].push(card);
-    }
-  });
-
-  [...STATUSES.map(s => s.label), 'Other'].forEach(colLabel => {
-    const cards = grouped[colLabel] || [];
-    const s = STATUSES.find(x => x.label === colLabel) || { color: '#6b7280' };
-
-    const col = document.createElement('div');
-    col.className = 'board-col';
-    col.innerHTML = `
+  columnsToRender.forEach(col => {
+    const colEl = document.createElement('div');
+    colEl.className = 'board-col';
+    colEl.innerHTML = `
       <div class="board-col-header">
-        <span style="width:7px;height:7px;border-radius:50%;background:${s.color}"></span>
-        ${colLabel}
-        <span class="board-col-count">${cards.length}</span>
+        <span style="width:7px;height:7px;border-radius:50%;background:${col.color}"></span>
+        ${col.label}
+        <span class="board-col-count">${col.cards.length}</span>
       </div>
       <div class="board-col-cards">
-        ${cards.length === 0 ? `<div class="board-card" style="opacity:0.4;cursor:default"><div class="board-card-title" style="font-size:11px;color:var(--muted)">Empty</div></div>` : ''}
-        ${cards.map(card => {
+        ${col.cards.length === 0 ? `<div class="board-card" style="opacity:0.4;cursor:default"><div class="board-card-title" style="font-size:11px;color:var(--muted)">Empty</div></div>` : ''}
+        ${col.cards.map(card => {
           const tags = card.tags.slice(0, 2).map(t => {
             const label = typeof t === 'string' ? t : t.name || String(t);
             return `<span class="tag">${label}</span>`;
@@ -524,7 +539,7 @@ function renderBoardView(area) {
           </div>`;
         }).join('')}
       </div>`;
-    wrapper.appendChild(col);
+    wrapper.appendChild(colEl);
   });
 
   area.appendChild(wrapper);

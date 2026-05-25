@@ -106,6 +106,39 @@ async function fetchBoards() {
   return Array.isArray(data) ? data : [];
 }
 
+async function fetchColumns(boardId) {
+  // Try to get custom columns first
+  let columns = [];
+  try {
+    const data = await fetchFizzi(`/${FIZZY_ACCOUNT}/boards/${boardId}/columns.json`);
+    if (Array.isArray(data) && data.length > 0) {
+      columns = data.map(c => ({ id: c.id, name: c.name, color: c.color || null }));
+    }
+  } catch(e) {
+    // ignore, use default columns
+  }
+
+  // If no custom columns, use Fizzy's default workflow columns
+  if (columns.length === 0) {
+    columns = [
+      { id: 'stream', name: 'Stream', color: '#89b4fa' },
+      { id: 'not_now', name: 'Not now', color: '#7f849c' },
+      { id: 'closed', name: 'Closed', color: '#a6e3a1' },
+    ];
+  }
+
+  return columns;
+}
+
+async function fetchColumnCards(boardId, columnId) {
+  try {
+    const data = await fetchFizzi(`/${FIZZY_ACCOUNT}/boards/${boardId}/columns/${columnId}.json`);
+    return Array.isArray(data) ? data : [];
+  } catch(e) {
+    return [];
+  }
+}
+
 // Filter helpers
 function filterCards(cards, query) {
   let result = [...cards];
@@ -150,6 +183,28 @@ app.get('/api/boards', async (req, res, next) => {
       name: b.name,
       created_at: b.created_at,
     })));
+  } catch (err) {
+    next(err);
+  }
+});
+
+// Columns with cards (real Fizzy columns)
+app.get('/api/columns', async (req, res, next) => {
+  try {
+    const boardId = req.query.board || FIZZY_BOARD;
+    const columns = await fetchColumns(boardId);
+    const result = [];
+    for (const col of columns) {
+      const rawCards = await fetchColumnCards(boardId, col.id);
+      const cards = rawCards.map(normalizeFizzyCard);
+      result.push({
+        id: col.id,
+        name: col.name,
+        color: col.color,
+        cards,
+      });
+    }
+    res.json(result);
   } catch (err) {
     next(err);
   }
