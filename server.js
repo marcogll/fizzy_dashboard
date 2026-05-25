@@ -31,12 +31,44 @@ async function fetchFizzi(path) {
   return res.json();
 }
 
+const TAG_STATUS_MAP = {
+  'quote': 'quote',
+  'tracking': 'tracking',
+  'tbd': 'tbd',
+  'review': 'review',
+  'blocked': 'stopped',
+  'waiting': 'not_now',
+  'approved': 'done',
+  'stopped': 'stopped',
+  'maybe': 'maybe',
+  'backlog': 'backlog',
+  'testing': 'testing',
+  'dev': 'dev',
+  'development': 'dev',
+  'urgent': 'almost',
+  'golden': 'almost',
+  'qa': 'testing',
+};
+
+function inferStatus(raw) {
+  // Priority 1: explicit Fizzy states
+  if (raw.closed) return 'done';
+  if (raw.postponed) return 'not_now';
+
+  // Priority 2: tags
+  for (const tag of raw.tags || []) {
+    const mapped = TAG_STATUS_MAP[String(tag).toLowerCase()];
+    if (mapped) return mapped;
+  }
+
+  // Priority 3: golden flag
+  if (raw.golden) return 'almost';
+
+  return 'inprogress';
+}
+
 function normalizeFizzyCard(raw) {
-  // Map Fizzy state to dashboard status
-  let status = 'inprogress';
-  if (raw.closed) status = 'done';
-  else if (raw.postponed) status = 'not_now';
-  else if (raw.golden) status = 'almost';
+  const status = inferStatus(raw);
 
   const assignee = raw.assignees && raw.assignees.length > 0
     ? raw.assignees[0]
