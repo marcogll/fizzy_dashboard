@@ -492,8 +492,7 @@ function renderBoardView(area) {
   });
 
   [...STATUSES.map(s => s.label), 'Other'].forEach(colLabel => {
-    const cards = grouped[colLabel];
-    if (!cards || cards.length === 0) return;
+    const cards = grouped[colLabel] || [];
     const s = STATUSES.find(x => x.label === colLabel) || { color: '#6b7280' };
 
     const col = document.createElement('div');
@@ -505,6 +504,7 @@ function renderBoardView(area) {
         <span class="board-col-count">${cards.length}</span>
       </div>
       <div class="board-col-cards">
+        ${cards.length === 0 ? `<div class="board-card" style="opacity:0.4;cursor:default"><div class="board-card-title" style="font-size:11px;color:var(--muted)">Empty</div></div>` : ''}
         ${cards.map(card => {
           const tags = card.tags.slice(0, 2).map(t => {
             const label = typeof t === 'string' ? t : t.name || String(t);
