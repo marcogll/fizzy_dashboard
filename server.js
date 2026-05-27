@@ -17,7 +17,8 @@ const FIZZY_ACCOUNT = process.env.FIZZY_ACCOUNT;
 
 async function fetchFizzi(path) {
   const baseUrl = FIZZY_API_URL.replace(/\/$/, '');
-  const res = await fetch(`${baseUrl}${path}`, {
+  const url = path.startsWith('http') ? path : `${baseUrl}${path}`;
+  const res = await fetch(url, {
     headers: {
       'Authorization': `Bearer ${FIZZY_TOKEN}`,
       'Content-Type': 'application/json',
@@ -28,7 +29,8 @@ async function fetchFizzi(path) {
     const text = await res.text().catch(() => '');
     throw new Error(`HTTP ${res.status}: ${res.statusText} — ${text.slice(0, 200)}`);
   }
-  return res.json();
+  const data = await res.json();
+  return { data, res };
 }
 
 const TAG_STATUS_MAP = {
@@ -95,14 +97,21 @@ function normalizeFizzyCard(raw) {
 }
 
 async function fetchCards() {
-  // Fetch all cards for the account
-  const data = await fetchFizzi(`/${FIZZY_ACCOUNT}/cards.json`);
-  const cards = Array.isArray(data) ? data : [];
+  const cards = [];
+  let nextUrl = `/${FIZZY_ACCOUNT}/cards.json`;
+  while (nextUrl) {
+    const { data, res } = await fetchFizzi(nextUrl);
+    const page = Array.isArray(data) ? data : [];
+    cards.push(...page);
+    const link = res.headers.get('link') || '';
+    const nextMatch = link.match(/<([^>]+)>\s*;\s*rel="next"/);
+    nextUrl = nextMatch ? nextMatch[1] : null;
+  }
   return cards.map(normalizeFizzyCard);
 }
 
 async function fetchBoards() {
-  const data = await fetchFizzi(`/${FIZZY_ACCOUNT}/boards.json`);
+  const { data } = await fetchFizzi(`/${FIZZY_ACCOUNT}/boards.json`);
   return Array.isArray(data) ? data : [];
 }
 
@@ -110,7 +119,7 @@ async function fetchColumns(boardId) {
   // Try to get custom columns first
   let columns = [];
   try {
-    const data = await fetchFizzi(`/${FIZZY_ACCOUNT}/boards/${boardId}/columns.json`);
+    const { data } = await fetchFizzi(`/${FIZZY_ACCOUNT}/boards/${boardId}/columns.json`);
     if (Array.isArray(data) && data.length > 0) {
       columns = data.map(c => ({ id: c.id, name: c.name, color: c.color || null }));
     }
@@ -132,7 +141,7 @@ async function fetchColumns(boardId) {
 
 async function fetchColumnCards(boardId, columnId) {
   try {
-    const data = await fetchFizzi(`/${FIZZY_ACCOUNT}/boards/${boardId}/columns/${columnId}.json`);
+    const { data } = await fetchFizzi(`/${FIZZY_ACCOUNT}/boards/${boardId}/columns/${columnId}.json`);
     return Array.isArray(data) ? data : [];
   } catch(e) {
     return [];
