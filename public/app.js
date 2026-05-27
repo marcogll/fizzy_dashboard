@@ -527,6 +527,13 @@ function buildBoardColumns() {
   const boardColorMap = {};
   const boardIdOrder = [];
 
+  allBoards.forEach((b, i) => {
+    const name = b.name || b.id;
+    grouped[name] = [];
+    boardColorMap[name] = boardColors[i % boardColors.length];
+    boardIdOrder.push(b.id);
+  });
+
   filteredCards.forEach(card => {
     const b = card.board;
     if (!b || (!b.id && !b.name)) {
@@ -546,15 +553,6 @@ function buildBoardColumns() {
       boardIdOrder.push(id);
     }
     grouped[name].push(card);
-  });
-
-  boardIdOrder.sort((a, b) => {
-    const ai = boardOrder.indexOf(a);
-    const bi = boardOrder.indexOf(b);
-    if (ai === -1 && bi === -1) return 0;
-    if (ai === -1) return 1;
-    if (bi === -1) return -1;
-    return ai - bi;
   });
 
   return boardIdOrder.map(id => {
