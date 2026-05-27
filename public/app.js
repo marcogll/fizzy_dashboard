@@ -87,6 +87,7 @@ let activeBoard = 'all';
 let dateFrom = '';
 let dateTo = '';
 let boardColumns = [];
+let allBoards = [];
 let allTags = [];
 let allAssignees = [];
 
@@ -126,6 +127,7 @@ async function fetchColumnsAPI() {
 async function loadBoards() {
   try {
     const boards = await fetchBoards();
+    allBoards = boards;
     const select = document.getElementById('board-select');
     select.innerHTML = '<option value="all">All boards</option>';
     boards.forEach(b => {
@@ -515,17 +517,49 @@ function buildBoardColumns() {
     return Object.values(colNameMap);
   }
 
+  const boardColors = ['#89b4fa','#a6e3a1','#fab387','#cba6f7','#f38ba8','#f9e2af','#74c7ec','#b4befe'];
+  const boardOrder = allBoards.map(b => b.id);
+  const boardNames = {};
+  allBoards.forEach(b => { boardNames[b.id] = b.name; });
+
   const grouped = {};
-  STATUSES.forEach(s => { grouped[s.label] = []; });
-  grouped['Other'] = [];
+  const boardColorMap = {};
+  const boardIdOrder = [];
+
   filteredCards.forEach(card => {
-    const s = resolveStatus(card.status);
-    const label = s ? s.label : 'Other';
-    if (grouped[label] !== undefined) grouped[label].push(card);
-    else grouped['Other'].push(card);
+    const b = card.board;
+    if (!b || (!b.id && !b.name)) {
+      if (!grouped['Other']) {
+        grouped['Other'] = [];
+        boardColorMap['Other'] = '#6b7280';
+        boardIdOrder.push('Other');
+      }
+      grouped['Other'].push(card);
+      return;
+    }
+    const id = b.id || b.name;
+    const name = boardNames[id] || b.name || id;
+    if (!grouped[name]) {
+      grouped[name] = [];
+      boardColorMap[name] = boardColors[boardIdOrder.length % boardColors.length];
+      boardIdOrder.push(id);
+    }
+    grouped[name].push(card);
   });
-  return [...STATUSES.map(s => ({ label: s.label, color: s.color, cards: grouped[s.label] || [] })),
-          { label: 'Other', color: '#6b7280', cards: grouped['Other'] || [] }];
+
+  boardIdOrder.sort((a, b) => {
+    const ai = boardOrder.indexOf(a);
+    const bi = boardOrder.indexOf(b);
+    if (ai === -1 && bi === -1) return 0;
+    if (ai === -1) return 1;
+    if (bi === -1) return -1;
+    return ai - bi;
+  });
+
+  return boardIdOrder.map(id => {
+    const name = boardNames[id] || id;
+    return { label: name, color: boardColorMap[name] || '#6b7280', cards: grouped[name] || [] };
+  });
 }
 
 function renderBoardView(area) {
