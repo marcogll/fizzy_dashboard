@@ -1002,19 +1002,39 @@ function renderProjectStatusChart(data) {
     container.innerHTML = '<div style="font-size:12px;color:var(--muted);padding:0.5rem 0">No data</div>';
     return;
   }
+
+  const R = 28, STROKE = 11, SIZE = 80;
+  const C = 2 * Math.PI * R;
+
+  function donutSVG(statuses, total) {
+    let dashes = '', offset = 0;
+    statuses.forEach(s => {
+      const frac = s.count / total;
+      const len = frac * C;
+      dashes += `<circle cx="40" cy="40" r="${R}" fill="none" stroke="${s.color}" stroke-width="${STROKE}"
+        stroke-dasharray="${len} ${C - len}" stroke-dashoffset="${-offset}" transform="rotate(-90 40 40)"
+        title="${s.label}: ${s.count}"/>`;
+      offset += len;
+    });
+    return `<svg viewBox="0 0 ${SIZE} ${SIZE}" width="${SIZE}" height="${SIZE}" class="project-donut">
+      ${dashes}
+      <text x="40" y="40" text-anchor="middle" dominant-baseline="central"
+        font-size="14" font-weight="600" font-family="'DM Mono',monospace" fill="var(--text)">${total}</text>
+    </svg>`;
+  }
+
   let html = '<div class="project-stats">';
   data.forEach(p => {
     html += `
       <div class="project-row">
-        <div class="project-header">
-          <span class="project-name">${escHtml(p.project)}</span>
-          <span class="project-total">${p.total} cards</span>
-        </div>
-        <div class="project-bar">
-          ${p.statuses.map(s => `<div class="project-bar-seg" style="width:${(s.count/p.total*100)}%;background:${s.color}" title="${s.label}: ${s.count}"></div>`).join('')}
-        </div>
-        <div class="project-statuses">
-          ${p.statuses.map(s => `<span class="project-status-tag"><span style="width:7px;height:7px;border-radius:50%;background:${s.color};display:inline-block;flex-shrink:0"></span> ${s.label} ${s.count}</span>`).join('')}
+        <div class="project-row-top">
+          ${donutSVG(p.statuses, p.total)}
+          <div class="project-info">
+            <div class="project-name">${escHtml(p.project)}</div>
+            <div class="project-statuses">
+              ${p.statuses.map(s => `<span class="project-status-tag"><span style="width:7px;height:7px;border-radius:50%;background:${s.color};display:inline-block;flex-shrink:0"></span> ${s.label} ${s.count}</span>`).join('')}
+            </div>
+          </div>
         </div>
       </div>`;
   });
