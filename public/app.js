@@ -142,7 +142,9 @@ async function loadData() {
   showLoading(true);
   hideError();
   try {
-    const [cardData, colData] = await Promise.all([fetchAPI(), fetchColumnsAPI().catch(() => [])]);
+    const [cardData, colData] = activeBoard !== 'all'
+      ? await Promise.all([fetchAPI(), fetchColumnsAPI().catch(() => [])])
+      : [await fetchAPI(), []];
 
     const cards = Array.isArray(cardData) ? cardData :
                   cardData.cards ? cardData.cards :
@@ -484,30 +486,53 @@ function renderListCard(card) {
   return el;
 }
 
+function buildBoardColumns() {
+  if (activeBoard !== 'all' && boardColumns && boardColumns.length > 0) {
+    const colNameMap = {};
+    boardColumns.forEach(col => {
+      const key = col.name.toLowerCase().replace(/[^a-z0-9]/g, '');
+      colNameMap[key] = { label: col.name, color: col.color || '#6b7280', id: col.id, cards: [] };
+    });
+
+    filteredCards.forEach(card => {
+      const rawStatus = (card.status || '').toLowerCase().trim();
+      const s = resolveStatus(card.status);
+      const statusKey = rawStatus.replace(/[^a-z0-9]/g, '');
+      const labelKey = s ? s.label.toLowerCase().replace(/[^a-z0-9]/g, '') : statusKey;
+
+      const matchedKey = Object.keys(colNameMap).find(k =>
+        k === statusKey || k === labelKey || k === rawStatus
+      );
+      if (matchedKey) {
+        colNameMap[matchedKey].cards.push(card);
+        return;
+      }
+
+      const firstCol = Object.keys(colNameMap)[0];
+      if (firstCol) colNameMap[firstCol].cards.push(card);
+    });
+
+    return Object.values(colNameMap);
+  }
+
+  const grouped = {};
+  STATUSES.forEach(s => { grouped[s.label] = []; });
+  grouped['Other'] = [];
+  filteredCards.forEach(card => {
+    const s = resolveStatus(card.status);
+    const label = s ? s.label : 'Other';
+    if (grouped[label] !== undefined) grouped[label].push(card);
+    else grouped['Other'].push(card);
+  });
+  return [...STATUSES.map(s => ({ label: s.label, color: s.color, cards: grouped[s.label] || [] })),
+          { label: 'Other', color: '#6b7280', cards: grouped['Other'] || [] }];
+}
+
 function renderBoardView(area) {
   const wrapper = document.createElement('div');
   wrapper.className = 'board-view';
 
-  // If we have real columns from Fizzy, use them
-  const columnsToRender = (boardColumns && boardColumns.length > 0)
-    ? boardColumns.map(col => ({
-        label: col.name,
-        color: col.color || '#6b7280',
-        cards: col.cards || [],
-      }))
-    : (() => {
-        const grouped = {};
-        STATUSES.forEach(s => { grouped[s.label] = []; });
-        grouped['Other'] = [];
-        filteredCards.forEach(card => {
-          const s = resolveStatus(card.status);
-          const label = s ? s.label : 'Other';
-          if (grouped[label] !== undefined) grouped[label].push(card);
-          else grouped['Other'].push(card);
-        });
-        return [...STATUSES.map(s => ({ label: s.label, color: s.color, cards: grouped[s.label] || [] })),
-                { label: 'Other', color: '#6b7280', cards: grouped['Other'] || [] }];
-      })();
+  const columnsToRender = buildBoardColumns();
 
   columnsToRender.forEach(col => {
     const colEl = document.createElement('div');
