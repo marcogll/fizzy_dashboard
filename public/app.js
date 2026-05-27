@@ -973,26 +973,24 @@ function renderProductivity(p) {
   if (ratioEl) ratioEl.textContent = p.activeRatio + '%';
 }
 
-// ─── Project & Status Chart ────────────────────────
+// ─── Project Workload Donut ─────────────────────────
+const PROJECT_COLORS = [
+  '#89b4fa', '#a6e3a1', '#fab387', '#cba6f7',
+  '#f38ba8', '#f9e2af', '#74c7ec', '#b4befe',
+  '#eba0ac', '#f5c2e7', '#94e2d5', '#bac2de',
+];
+
 function computeProjectStatus(cards) {
-  const projects = {};
+  const counts = {};
   cards.forEach(card => {
-    const projectName = card.board
+    const name = card.board
       ? (typeof card.board === 'string' ? card.board : card.board.name || card.board.id || 'No Board')
       : 'No Board';
-    if (!projects[projectName]) projects[projectName] = {};
-    const s = resolveStatus(card.status);
-    const label = s ? s.label : (card.status || 'Unknown');
-    projects[projectName][label] = (projects[projectName][label] || 0) + 1;
+    counts[name] = (counts[name] || 0) + 1;
   });
-  return Object.entries(projects).map(([project, statuses]) => {
-    const total = Object.values(statuses).reduce((a, b) => a + b, 0);
-    const sorted = STATUSES
-      .filter(s => statuses[s.label])
-      .map(s => ({ label: s.label, count: statuses[s.label], color: s.color }))
-      .sort((a, b) => b.count - a.count);
-    return { project, total, statuses: sorted };
-  }).sort((a, b) => b.total - a.total);
+  return Object.entries(counts)
+    .map(([project, count], i) => ({ project, count, color: PROJECT_COLORS[i % PROJECT_COLORS.length] }))
+    .sort((a, b) => b.count - a.count);
 }
 
 function renderProjectStatusChart(data) {
@@ -1003,42 +1001,52 @@ function renderProjectStatusChart(data) {
     return;
   }
 
-  const R = 28, STROKE = 11, SIZE = 80;
+  const total = data.reduce((s, p) => s + p.count, 0);
+  const R = 48, STROKE = 20, SIZE = 140;
   const C = 2 * Math.PI * R;
 
-  function donutSVG(statuses, total) {
-    let dashes = '', offset = 0;
-    statuses.forEach(s => {
-      const frac = s.count / total;
-      const len = frac * C;
-      dashes += `<circle cx="40" cy="40" r="${R}" fill="none" stroke="${s.color}" stroke-width="${STROKE}"
-        stroke-dasharray="${len} ${C - len}" stroke-dashoffset="${-offset}" transform="rotate(-90 40 40)"
-        title="${s.label}: ${s.count}"/>`;
-      offset += len;
-    });
-    return `<svg viewBox="0 0 ${SIZE} ${SIZE}" width="${SIZE}" height="${SIZE}" class="project-donut">
-      ${dashes}
-      <text x="40" y="40" text-anchor="middle" dominant-baseline="central"
-        font-size="14" font-weight="600" font-family="'DM Mono',monospace" fill="var(--text)">${total}</text>
-    </svg>`;
-  }
-
-  let html = '<div class="project-stats">';
+  let dashes = '', offset = 0;
   data.forEach(p => {
-    html += `
-      <div class="project-row">
-        <div class="project-row-top">
-          ${donutSVG(p.statuses, p.total)}
-          <div class="project-info">
-            <div class="project-name">${escHtml(p.project)}</div>
-            <div class="project-statuses">
-              ${p.statuses.map(s => `<span class="project-status-tag"><span style="width:7px;height:7px;border-radius:50%;background:${s.color};display:inline-block;flex-shrink:0"></span> ${s.label} ${s.count}</span>`).join('')}
-            </div>
-          </div>
-        </div>
-      </div>`;
+    const frac = p.count / total;
+    const len = frac * C;
+    dashes += `<circle cx="${SIZE/2}" cy="${SIZE/2}" r="${R}" fill="none" stroke="${p.color}" stroke-width="${STROKE}"
+      stroke-dasharray="${len} ${C - len}" stroke-dashoffset="${-offset}" transform="rotate(-90 ${SIZE/2} ${SIZE/2})"
+      title="${escHtml(p.project)}: ${p.count} cards (${(frac*100).toFixed(1)}%)" class="proj-seg"/>`;
+    offset += len;
   });
-  html += '</div>';
+
+  const max = data[0];
+  const maxFrac = max.count / total;
+
+  let html = `<div class="project-pie-wrap">
+    <div class="project-pie-main">
+      <svg viewBox="0 0 ${SIZE} ${SIZE}" width="${SIZE}" height="${SIZE}" class="project-donut">
+        ${dashes}
+        <text x="${SIZE/2}" y="${SIZE/2 - 6}" text-anchor="middle" dominant-baseline="central"
+          font-size="18" font-weight="700" font-family="'DM Mono',monospace" fill="var(--text)">${total}</text>
+        <text x="${SIZE/2}" y="${SIZE/2 + 10}" text-anchor="middle" dominant-baseline="central"
+          font-size="9" fill="var(--muted)" font-family="'DM Sans',sans-serif">cards</text>
+      </svg>
+      <div class="project-pie-lead">
+        <div class="proj-lead-label">Mayor carga</div>
+        <span class="proj-lead-dot" style="background:${max.color}"></span>
+        <span class="proj-lead-name">${escHtml(max.project)}</span>
+        <span class="proj-lead-count">${max.count} (${(maxFrac*100).toFixed(1)}%)</span>
+      </div>
+    </div>
+    <div class="project-legend">
+      ${data.map(p => {
+        const pct = ((p.count / total) * 100).toFixed(1);
+        return `<div class="proj-legend-item">
+          <span style="width:10px;height:10px;border-radius:50%;background:${p.color};display:inline-block;flex-shrink:0"></span>
+          <span class="proj-leg-name">${escHtml(p.project)}</span>
+          <span class="proj-leg-count">${p.count}</span>
+          <span class="proj-leg-pct">${pct}%</span>
+        </div>`;
+      }).join('')}
+    </div>
+  </div>`;
+
   container.innerHTML = html;
 }
 
