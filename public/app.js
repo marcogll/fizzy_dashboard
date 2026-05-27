@@ -162,6 +162,8 @@ async function loadData() {
     renderSidebar();
     renderPeopleNav();
     renderTagFilter();
+    renderProjectStatusChart(computeProjectStatus(filteredCards));
+    renderGanttChart(computeGanttData(filteredCards));
     updateLastUpdated();
   } catch(err) {
     showError(err.message);
@@ -174,6 +176,8 @@ async function loadData() {
     renderSidebar();
     renderPeopleNav();
     renderTagFilter();
+    renderProjectStatusChart(computeProjectStatus(filteredCards));
+    renderGanttChart(computeGanttData(filteredCards));
   } finally {
     showLoading(false);
   }
@@ -263,6 +267,8 @@ function applyFilters() {
   });
   renderCards();
   renderStats();
+  renderProjectStatusChart(computeProjectStatus(filteredCards));
+  renderGanttChart(computeGanttData(filteredCards));
 }
 
 // ─── Render ─────────────────────────────────────────
@@ -965,6 +971,148 @@ function renderProductivity(p) {
   document.getElementById('prod-rate').textContent = p.completionRate + '%';
   const ratioEl = document.getElementById('prod-active-ratio');
   if (ratioEl) ratioEl.textContent = p.activeRatio + '%';
+}
+
+// ─── Project & Status Chart ────────────────────────
+function computeProjectStatus(cards) {
+  const projects = {};
+  cards.forEach(card => {
+    const projectName = card.board
+      ? (typeof card.board === 'string' ? card.board : card.board.name || card.board.id || 'No Board')
+      : 'No Board';
+    if (!projects[projectName]) projects[projectName] = {};
+    const s = resolveStatus(card.status);
+    const label = s ? s.label : (card.status || 'Unknown');
+    projects[projectName][label] = (projects[projectName][label] || 0) + 1;
+  });
+  return Object.entries(projects).map(([project, statuses]) => {
+    const total = Object.values(statuses).reduce((a, b) => a + b, 0);
+    const sorted = STATUSES
+      .filter(s => statuses[s.label])
+      .map(s => ({ label: s.label, count: statuses[s.label], color: s.color }))
+      .sort((a, b) => b.count - a.count);
+    return { project, total, statuses: sorted };
+  }).sort((a, b) => b.total - a.total);
+}
+
+function renderProjectStatusChart(data) {
+  const container = document.getElementById('project-status-chart');
+  if (!container) return;
+  if (!data || data.length === 0) {
+    container.innerHTML = '<div style="font-size:12px;color:var(--muted);padding:0.5rem 0">No data</div>';
+    return;
+  }
+  let html = '<div class="project-stats">';
+  data.forEach(p => {
+    html += `
+      <div class="project-row">
+        <div class="project-header">
+          <span class="project-name">${escHtml(p.project)}</span>
+          <span class="project-total">${p.total} cards</span>
+        </div>
+        <div class="project-bar">
+          ${p.statuses.map(s => `<div class="project-bar-seg" style="width:${(s.count/p.total*100)}%;background:${s.color}" title="${s.label}: ${s.count}"></div>`).join('')}
+        </div>
+        <div class="project-statuses">
+          ${p.statuses.map(s => `<span class="project-status-tag"><span style="width:7px;height:7px;border-radius:50%;background:${s.color};display:inline-block;flex-shrink:0"></span> ${s.label} ${s.count}</span>`).join('')}
+        </div>
+      </div>`;
+  });
+  html += '</div>';
+  container.innerHTML = html;
+}
+
+// ─── Gantt Chart ──────────────────────────────────
+function computeGanttData(cards) {
+  const now = new Date();
+  const projects = {};
+  cards.forEach(card => {
+    const projectName = card.board
+      ? (typeof card.board === 'string' ? card.board : card.board.name || card.board.id || 'No Board')
+      : 'No Board';
+    if (!projects[projectName]) projects[projectName] = [];
+    const start = card.created_at ? new Date(card.created_at) : now;
+    let end = card.updated_at ? new Date(card.updated_at) : now;
+    if (end < start) end = start;
+    const s = resolveStatus(card.status);
+    projects[projectName].push({
+      id: card.id,
+      title: card.title,
+      start,
+      end,
+      statusLabel: s ? s.label : (card.status || 'Unknown'),
+      color: s ? s.color : '#6b7280',
+    });
+  });
+  return Object.entries(projects)
+    .map(([project, cards]) => ({
+      project,
+      cards: cards.sort((a, b) => a.start - b.start),
+    }))
+    .sort((a, b) => a.project.localeCompare(b.project));
+}
+
+function renderGanttChart(data) {
+  const container = document.getElementById('gantt-chart');
+  if (!container) return;
+  if (!data || data.length === 0 || data.every(p => p.cards.length === 0)) {
+    container.innerHTML = '<div class="gantt-empty">No timeline data available</div>';
+    return;
+  }
+
+  let minDate = Infinity, maxDate = -Infinity;
+  data.forEach(p => p.cards.forEach(c => {
+    if (c.start.getTime() < minDate) minDate = c.start.getTime();
+    if (c.end.getTime() > maxDate) maxDate = c.end.getTime();
+  }));
+  if (minDate === Infinity) { container.innerHTML = '<div class="gantt-empty">No timeline data</div>'; return; }
+
+  minDate = new Date(minDate);
+  maxDate = new Date(maxDate);
+  const rangeMs = maxDate - minDate;
+  if (rangeMs < 86400000) maxDate = new Date(minDate.getTime() + 86400000 * 14);
+
+  const totalMs = maxDate - minDate;
+  const pos = (d) => ((d.getTime() - minDate.getTime()) / totalMs) * 100;
+
+  const markers = [];
+  const cursor = new Date(minDate);
+  cursor.setDate(1);
+  cursor.setMonth(cursor.getMonth() + 1);
+  while (cursor < maxDate) {
+    markers.push(new Date(cursor));
+    cursor.setMonth(cursor.getMonth() + 1);
+  }
+
+  const fmt = (d) => d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+
+  let html = '<div class="gantt-scroll"><div class="gantt-table">';
+  html += `<div class="gantt-row">
+    <div class="gantt-label gantt-label-hdr">Card</div>
+    <div class="gantt-track">
+      <div class="gantt-axis">
+        ${markers.map(m => `<div class="gantt-axmark" style="left:${pos(m)}%"><span>${fmt(m)}</span></div>`).join('')}
+      </div>
+    </div>
+  </div>`;
+
+  data.forEach(p => {
+    if (p.cards.length === 0) return;
+    html += `<div class="gantt-project-label">${escHtml(p.project)}</div>`;
+    p.cards.forEach(c => {
+      const left = Math.max(0, pos(c.start));
+      let width = Math.max(1.5, pos(c.end) - left);
+      html += `<div class="gantt-row">
+        <div class="gantt-label" title="${escHtml(c.title)}">${escHtml(c.title)}</div>
+        <div class="gantt-track">
+          <div class="gantt-bar" style="left:${left}%;width:${width}%;background:${c.color}" title="${escHtml(c.title)} · ${c.statusLabel}"></div>
+        </div>
+      </div>`;
+    });
+  });
+
+  html += '</div></div>';
+  container.innerHTML = html;
 }
 
 async function refreshAll() {

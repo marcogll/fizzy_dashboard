@@ -986,3 +986,176 @@ header {
   .advanced-stats { grid-template-columns: 1fr; }
   .stats-section-wide { grid-column: auto; }
 }
+
+/* ─── Project Analytics ─── */
+.project-analytics {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  margin-bottom: 1.5rem;
+}
+
+.project-chart-container,
+.gantt-container {
+  min-height: 50px;
+}
+
+/* Project stacked bar */
+.project-stats {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.project-row {
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+}
+
+.project-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.project-name {
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--text);
+}
+
+.project-total {
+  font-size: 10px;
+  color: var(--muted);
+  font-family: 'DM Mono', monospace;
+}
+
+.project-bar {
+  display: flex;
+  height: 22px;
+  border-radius: 5px;
+  overflow: hidden;
+  background: var(--surface2);
+}
+
+.project-bar-seg {
+  height: 100%;
+  transition: opacity 0.15s;
+  cursor: pointer;
+}
+
+.project-bar-seg:hover {
+  opacity: 0.75;
+}
+
+.project-statuses {
+  display: flex;
+  gap: 0.6rem;
+  flex-wrap: wrap;
+  padding-top: 0.15rem;
+}
+
+.project-status-tag {
+  font-size: 10px;
+  color: var(--muted);
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+}
+
+/* ─── Gantt Chart ─── */
+.gantt-scroll {
+  overflow-x: auto;
+  padding-bottom: 0.5rem;
+}
+
+.gantt-table {
+  min-width: 700px;
+}
+
+.gantt-row {
+  display: flex;
+  align-items: center;
+  height: 24px;
+}
+
+.gantt-label {
+  width: 160px;
+  flex-shrink: 0;
+  font-size: 11px;
+  color: var(--text);
+  padding: 0 0.5rem;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.gantt-label-hdr {
+  font-weight: 600;
+  color: var(--muted);
+  text-transform: uppercase;
+  font-size: 10px;
+  letter-spacing: 0.05em;
+}
+
+.gantt-track {
+  flex: 1;
+  position: relative;
+  height: 18px;
+  background: var(--surface2);
+  border-radius: 3px;
+}
+
+.gantt-axis {
+  position: absolute;
+  inset: 0;
+}
+
+.gantt-axmark {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  border-left: 1px solid var(--border);
+}
+
+.gantt-axmark span {
+  position: absolute;
+  left: 4px;
+  top: 0;
+  font-size: 9px;
+  color: var(--muted);
+  white-space: nowrap;
+  line-height: 18px;
+}
+
+.gantt-bar {
+  position: absolute;
+  top: 2px;
+  height: 14px;
+  border-radius: 3px;
+  opacity: 0.85;
+  cursor: pointer;
+  transition: opacity 0.15s;
+  min-width: 3px;
+}
+
+.gantt-bar:hover {
+  opacity: 1;
+}
+
+.gantt-project-label {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--text);
+  padding: 0.3rem 0.5rem;
+  background: var(--surface2);
+  border-radius: 4px;
+  margin: 0.5rem 0 0.25rem;
+}
+
+.gantt-empty {
+  font-size: 12px;
+  color: var(--muted);
+  padding: 1rem 0.5rem;
+}
