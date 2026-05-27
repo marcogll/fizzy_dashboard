@@ -865,6 +865,108 @@ function renderVelocityChart(weeks) {
   `).join('')}</div>`;
 }
 
+// ─── Time KPIs ─────────────────────────────────────
+async function loadCycleTime() {
+  try {
+    const qs = buildQuery();
+    const res = await fetch(`/api/stats/cycle-time${qs ? '?' + qs : ''}`);
+    if (!res.ok) return;
+    const data = await res.json();
+    renderCycleTime(data.cycleTime);
+  } catch(e) {}
+}
+
+function renderCycleTime(ct) {
+  if (!ct) return;
+  document.getElementById('ct-avg').textContent = ct.avg !== null ? ct.avg + 'd' : '—';
+  document.getElementById('ct-min').textContent = ct.min !== null ? ct.min + 'd' : '—';
+  document.getElementById('ct-max').textContent = ct.max !== null ? ct.max + 'd' : '—';
+  const container = document.getElementById('cycle-time-boards');
+  if (!container || !ct.byBoard || ct.byBoard.length === 0) return;
+  const max = Math.max(...ct.byBoard.map(b => b.avg), 1);
+  const colors = ['#89b4fa','#a6e3a1','#fab387','#cba6f7','#f38ba8','#f9e2af'];
+  container.innerHTML = ct.byBoard.map((b, i) => `
+    <div class="mini-bar-row">
+      <span class="mini-bar-label">${b.board}</span>
+      <div class="mini-bar-track"><div class="mini-bar-fill" style="width:${(b.avg/max*100)}%;background:${colors[i % colors.length]}"></div></div>
+      <span class="mini-bar-count">${b.avg}d</span>
+    </div>
+  `).join('');
+}
+
+async function loadWeeklyTrend() {
+  try {
+    const qs = buildQuery();
+    const res = await fetch(`/api/stats/weekly-trend${qs ? '?' + qs : ''}`);
+    if (!res.ok) return;
+    const data = await res.json();
+    renderWeeklyTrend(data.weeklyTrend);
+  } catch(e) {}
+}
+
+function renderWeeklyTrend(weeks) {
+  const container = document.getElementById('weekly-trend-chart');
+  if (!container || !weeks) return;
+  const max = Math.max(...weeks.flatMap(w => [w.created, w.done]), 1);
+  container.innerHTML = `<div class="dual-chart">${weeks.map(w => `
+    <div class="dual-bar-wrap" title="${w.label}: ${w.created} created, ${w.done} done">
+      <div class="dual-bars">
+        <div class="dual-bar-created" style="height:${(w.created/max*100)}%" title="Created: ${w.created}"></div>
+        <div class="dual-bar-done" style="height:${(w.done/max*100)}%" title="Done: ${w.done}"></div>
+      </div>
+      <div class="dual-label">${w.label}</div>
+    </div>
+  `).join('')}</div>
+  <div class="dual-legend">
+    <span><span style="width:8px;height:8px;border-radius:2px;background:var(--accent2);display:inline-block"></span> Created</span>
+    <span><span style="width:8px;height:8px;border-radius:2px;background:var(--accent);display:inline-block"></span> Done</span>
+  </div>`;
+}
+
+async function loadDailyDistribution() {
+  try {
+    const qs = buildQuery();
+    const res = await fetch(`/api/stats/daily-distribution${qs ? '?' + qs : ''}`);
+    if (!res.ok) return;
+    const data = await res.json();
+    renderDailyDistribution(data.dailyDistribution);
+  } catch(e) {}
+}
+
+function renderDailyDistribution(days) {
+  const container = document.getElementById('day-chart');
+  if (!container || !days) return;
+  const max = Math.max(...days.map(d => d.created + d.done), 1);
+  container.innerHTML = days.map(d => {
+    const pct = (((d.created + d.done) / max) * 100);
+    return `
+      <div class="day-bar-wrap" title="${d.day}: ${d.created} created, ${d.done} done">
+        <div class="day-count">${d.created + d.done}</div>
+        <div class="day-bar" style="height:${pct}%;background:var(--accent2)"></div>
+        <div class="day-label">${d.day.slice(0,2)}</div>
+      </div>`;
+  }).join('');
+}
+
+async function loadProductivity() {
+  try {
+    const qs = buildQuery();
+    const res = await fetch(`/api/stats/productivity${qs ? '?' + qs : ''}`);
+    if (!res.ok) return;
+    const data = await res.json();
+    renderProductivity(data.productivity);
+  } catch(e) {}
+}
+
+function renderProductivity(p) {
+  if (!p) return;
+  document.getElementById('prod-active').textContent = p.active;
+  document.getElementById('prod-done').textContent = p.done;
+  document.getElementById('prod-rate').textContent = p.completionRate + '%';
+  const ratioEl = document.getElementById('prod-active-ratio');
+  if (ratioEl) ratioEl.textContent = p.activeRatio + '%';
+}
+
 async function refreshAll() {
   await loadData();
   await loadAdvancedStats();
@@ -872,6 +974,10 @@ async function refreshAll() {
   await loadTopTags();
   await loadPriorityStats();
   await loadVelocity();
+  await loadCycleTime();
+  await loadWeeklyTrend();
+  await loadDailyDistribution();
+  await loadProductivity();
 }
 
 // ─── Init ────────────────────────────────────────────

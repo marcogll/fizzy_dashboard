@@ -120,9 +120,38 @@
             <div class="stats-section-title">Priority</div>
             <div id="priority-bars"></div>
           </div>
-          <div class="stats-section stats-section-wide">
+          <div class="stats-section stats-section-wide" style="grid-column:1/-1">
             <div class="stats-section-title">Velocity (done per week)</div>
             <div id="velocity-chart"></div>
+          </div>
+          <!-- Time KPIs -->
+          <div class="stats-section">
+            <div class="stats-section-title">Cycle Time ⏱</div>
+            <div id="cycle-time-kpis" style="display:flex;gap:0.5rem;flex-wrap:wrap">
+              <div class="stat-card-mini"><div class="stat-mini-label">Avg</div><div class="stat-mini-value" id="ct-avg">—</div></div>
+              <div class="stat-card-mini"><div class="stat-mini-label">Min</div><div class="stat-mini-value" id="ct-min">—</div></div>
+              <div class="stat-card-mini"><div class="stat-mini-label">Max</div><div class="stat-mini-value" id="ct-max">—</div></div>
+            </div>
+            <div id="cycle-time-boards" class="mini-bars" style="margin-top:0.5rem"></div>
+          </div>
+          <div class="stats-section stats-section-wide">
+            <div class="stats-section-title">Weekly Trend (created vs done)</div>
+            <div class="dual-chart" id="weekly-trend-chart"></div>
+          </div>
+          <div class="stats-section">
+            <div class="stats-section-title">By Day</div>
+            <div class="day-chart" id="day-chart"></div>
+          </div>
+          <div class="stats-section">
+            <div class="stats-section-title">Productivity</div>
+            <div id="productivity-kpis" style="display:flex;gap:0.5rem;flex-wrap:wrap">
+              <div class="stat-card-mini"><div class="stat-mini-label">Active</div><div class="stat-mini-value" id="prod-active">—</div></div>
+              <div class="stat-card-mini"><div class="stat-mini-label">Done</div><div class="stat-mini-value" id="prod-done">—</div></div>
+              <div class="stat-card-mini"><div class="stat-mini-label">Rate</div><div class="stat-mini-value" id="prod-rate">—</div></div>
+            </div>
+            <div class="stats-mini" style="margin-top:0.4rem">
+              <span>Active ratio: <b id="prod-active-ratio">—</b></span>
+            </div>
           </div>
         </div>
 

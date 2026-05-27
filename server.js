@@ -294,6 +294,42 @@ app.get('/api/stats/by-assignee', async (req, res, next) => {
   }
 });
 
+app.get('/api/stats/cycle-time', async (req, res, next) => {
+  try {
+    const cards = filterCards(await fetchCards(), req.query);
+    res.json({ cycleTime: stats.computeCycleTime(cards) });
+  } catch (err) {
+    next(err);
+  }
+});
+
+app.get('/api/stats/weekly-trend', async (req, res, next) => {
+  try {
+    const cards = filterCards(await fetchCards(), req.query);
+    res.json({ weeklyTrend: stats.computeWeeklyTrend(cards) });
+  } catch (err) {
+    next(err);
+  }
+});
+
+app.get('/api/stats/daily-distribution', async (req, res, next) => {
+  try {
+    const cards = filterCards(await fetchCards(), req.query);
+    res.json({ dailyDistribution: stats.computeDailyDistribution(cards) });
+  } catch (err) {
+    next(err);
+  }
+});
+
+app.get('/api/stats/productivity', async (req, res, next) => {
+  try {
+    const cards = filterCards(await fetchCards(), req.query);
+    res.json({ productivity: stats.computeProductivityScore(cards) });
+  } catch (err) {
+    next(err);
+  }
+});
+
 // Error handler for Fizzi API failures
 app.use((err, req, res, next) => {
   if (req.path.startsWith('/api/')) {

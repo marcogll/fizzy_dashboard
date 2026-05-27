@@ -206,6 +206,95 @@ function computeVelocity(cards) {
   return weeks;
 }
 
+function computeCycleTime(cards) {
+  const doneCards = cards.filter(c => isStatus(c.status, 'done') && c.created_at && c.updated_at);
+  if (doneCards.length === 0) return { avg: null, min: null, max: null, byBoard: [] };
+
+  const times = doneCards.map(c => ({
+    id: c.id,
+    title: c.title,
+    board: c.board ? (c.board.name || c.board.id) : 'Unknown',
+    days: (new Date(c.updated_at) - new Date(c.created_at)) / 86400000,
+  }));
+
+  const days = times.map(t => t.days);
+  const avg = parseFloat((days.reduce((a, b) => a + b, 0) / days.length).toFixed(1));
+  const min = parseFloat(Math.min(...days).toFixed(1));
+  const max = parseFloat(Math.max(...days).toFixed(1));
+
+  const byBoard = {};
+  times.forEach(t => {
+    if (!byBoard[t.board]) byBoard[t.board] = [];
+    byBoard[t.board].push(t.days);
+  });
+  const boardAvgs = Object.entries(byBoard).map(([board, d]) => ({
+    board,
+    avg: parseFloat((d.reduce((a, b) => a + b, 0) / d.length).toFixed(1)),
+    count: d.length,
+  })).sort((a, b) => b.avg - a.avg);
+
+  return { avg, min, max, byBoard: boardAvgs };
+}
+
+function computeWeeklyTrend(cards) {
+  const now = new Date();
+  const weeks = [];
+  for (let i = 7; i >= 0; i--) {
+    const weekEnd = new Date(now);
+    weekEnd.setDate(now.getDate() - (now.getDay() === 0 ? 0 : now.getDay()) - (i * 7));
+    weekEnd.setHours(23, 59, 59, 999);
+    const weekStart = new Date(weekEnd);
+    weekStart.setDate(weekEnd.getDate() - 6);
+    weekStart.setHours(0, 0, 0, 0);
+
+    const created = cards.filter(c => {
+      if (!c.created_at) return false;
+      const d = new Date(c.created_at);
+      return d >= weekStart && d <= weekEnd;
+    }).length;
+
+    const done = cards.filter(c => {
+      if (!isStatus(c.status, 'done') || !c.updated_at) return false;
+      const d = new Date(c.updated_at);
+      return d >= weekStart && d <= weekEnd;
+    }).length;
+
+    const monday = new Date(weekStart);
+    const monthNames = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+    const label = `${monthNames[monday.getMonth()]} ${monday.getDate()}`;
+    weeks.push({ week: formatDateYMD(monday), label, created, done });
+  }
+  return weeks;
+}
+
+function computeDailyDistribution(cards) {
+  const days = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
+  const created = days.map(() => 0);
+  const done = days.map(() => 0);
+
+  cards.forEach(c => {
+    if (c.created_at) {
+      const d = new Date(c.created_at);
+      created[d.getDay()]++;
+    }
+    if (isStatus(c.status, 'done') && c.updated_at) {
+      const d = new Date(c.updated_at);
+      done[d.getDay()]++;
+    }
+  });
+
+  return days.map((day, i) => ({ day, created: created[i], done: done[i] }));
+}
+
+function computeProductivityScore(cards) {
+  const total = cards.length;
+  const done = cards.filter(c => isStatus(c.status, 'done')).length;
+  const active = cards.filter(c => isStatus(c.status, 'in progress') || isStatus(c.status, 'ongoing')).length;
+  const completionRate = total === 0 ? 0 : parseFloat(((done / total) * 100).toFixed(1));
+  const activeRatio = total === 0 ? 0 : parseFloat(((active / total) * 100).toFixed(1));
+  return { completionRate, activeRatio, total, done, active };
+}
+
 module.exports = {
   computeSummary,
   computeByStatus,
@@ -214,4 +303,8 @@ module.exports = {
   computeOverdue,
   computeVelocity,
   computeByAssignee,
+  computeCycleTime,
+  computeWeeklyTrend,
+  computeDailyDistribution,
+  computeProductivityScore,
 };
