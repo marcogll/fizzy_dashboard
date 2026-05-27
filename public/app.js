@@ -189,6 +189,7 @@ function normalizeCard(raw) {
           Array.isArray(raw.labels) ? raw.labels :
           raw.tags ? [raw.tags] : [],
     priority: raw.priority || raw.importance || '',
+    board: raw.board || null,
     assignee: raw.assignee || raw.assigned_to || raw.member || null,
     due_date: raw.due_date || raw.dueDate || raw.due || null,
     created_at: raw.created_at || raw.createdAt || null,
@@ -933,7 +934,6 @@ document.addEventListener('DOMContentLoaded', () => {
     if (e.key === 'Escape') document.getElementById('modal-overlay').classList.remove('open');
   });
 
-  loadBoards();
-  refreshAll();
+  loadBoards().then(() => refreshAll());
   setInterval(refreshAll, 60000);
 });
